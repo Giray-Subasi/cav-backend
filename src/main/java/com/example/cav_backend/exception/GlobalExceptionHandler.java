@@ -5,6 +5,7 @@ import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -43,6 +44,20 @@ public class GlobalExceptionHandler {
                                 .body(error);
         }
 
+        @ExceptionHandler(BadCredentialsException.class)
+        public ResponseEntity<ApiError> handleBadCredentials(
+                        BadCredentialsException e) {
+
+                ApiError error = new ApiError(
+                                401,
+                                "UNAUTHORIZED",
+                                "Invalid username or password");
+
+                return ResponseEntity
+                                .status(HttpStatus.UNAUTHORIZED)
+                                .body(error);
+        }
+
         @ExceptionHandler(IllegalArgumentException.class)
         public ResponseEntity<ApiError> handleIllegalArgument(
                         IllegalArgumentException e) {
@@ -78,10 +93,9 @@ public class GlobalExceptionHandler {
                 String message = e.getBindingResult()
                                 .getFieldErrors()
                                 .stream()
-                                .map(
-                                                error -> error.getField()
-                                                                + ": "
-                                                                + error.getDefaultMessage())
+                                .map(error -> error.getField()
+                                                + ": "
+                                                + error.getDefaultMessage())
                                 .collect(Collectors.joining("; "));
 
                 ApiError error = new ApiError(

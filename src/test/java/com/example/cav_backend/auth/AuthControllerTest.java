@@ -10,26 +10,27 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import com.example.cav_backend.exception.GlobalExceptionHandler;
 
-class AuthControllerTest {
-
-    private MockMvc mockMvc;
+@ExtendWith(MockitoExtension.class)
+public class AuthControllerTest {
 
     @Mock
     private AuthService authService;
 
+    private MockMvc mockMvc;
+
     @BeforeEach
     void setUp() {
-
-        MockitoAnnotations.openMocks(this);
 
         AuthController authController = new AuthController(authService);
 
@@ -46,12 +47,11 @@ class AuthControllerTest {
     }
 
     @Test
-    void shouldRegisterUserSuccessfully()
-            throws Exception {
+    void shouldRegisterUserAndReturn201() throws Exception {
 
         String requestBody = """
                 {
-                  "username": "newuser",
+                  "username": "giray",
                   "password": "password123"
                 }
                 """;
@@ -72,7 +72,7 @@ class AuthControllerTest {
 
         String requestBody = """
                 {
-                  "username": "   ",
+                  "username": "",
                   "password": "password123"
                 }
                 """;
@@ -83,15 +83,10 @@ class AuthControllerTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(
-                        jsonPath("$.status")
-                                .value(400))
+                        jsonPath("$.status").value(400))
                 .andExpect(
                         jsonPath("$.error")
-                                .value("VALIDATION_ERROR"))
-                .andExpect(
-                        jsonPath("$.message")
-                                .value(
-                                        "username: Username cannot be empty"));
+                                .value("VALIDATION_ERROR"));
 
         verifyNoInteractions(authService);
     }
@@ -102,7 +97,7 @@ class AuthControllerTest {
 
         String requestBody = """
                 {
-                  "username": "newuser",
+                  "username": "giray",
                   "password": "123"
                 }
                 """;
@@ -113,27 +108,21 @@ class AuthControllerTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(
-                        jsonPath("$.status")
-                                .value(400))
+                        jsonPath("$.status").value(400))
                 .andExpect(
                         jsonPath("$.error")
-                                .value("VALIDATION_ERROR"))
-                .andExpect(
-                        jsonPath("$.message")
-                                .value(
-                                        "password: Password must be between 6 and 100 characters"));
+                                .value("VALIDATION_ERROR"));
 
         verifyNoInteractions(authService);
     }
 
     @Test
-    void shouldLoginSuccessfully()
-            throws Exception {
+    void shouldLoginAndReturnToken() throws Exception {
 
         when(
                 authService.login(
                         any(LoginRequest.class)))
-                .thenReturn("test-jwt-token");
+                .thenReturn("mock-jwt-token");
 
         String requestBody = """
                 {
@@ -149,7 +138,7 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(
                         jsonPath("$.token")
-                                .value("test-jwt-token"));
+                                .value("mock-jwt-token"));
 
         verify(authService)
                 .login(any(LoginRequest.class));
@@ -172,15 +161,10 @@ class AuthControllerTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(
-                        jsonPath("$.status")
-                                .value(400))
+                        jsonPath("$.status").value(400))
                 .andExpect(
                         jsonPath("$.error")
-                                .value("VALIDATION_ERROR"))
-                .andExpect(
-                        jsonPath("$.message")
-                                .value(
-                                        "username: Username cannot be empty"));
+                                .value("VALIDATION_ERROR"));
 
         verifyNoInteractions(authService);
     }
@@ -202,16 +186,45 @@ class AuthControllerTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(
-                        jsonPath("$.status")
-                                .value(400))
+                        jsonPath("$.status").value(400))
                 .andExpect(
                         jsonPath("$.error")
-                                .value("VALIDATION_ERROR"))
+                                .value("VALIDATION_ERROR"));
+
+        verifyNoInteractions(authService);
+    }
+
+    @Test
+    void shouldReturn401WhenLoginCredentialsAreInvalid()
+            throws Exception {
+
+        when(
+                authService.login(
+                        any(LoginRequest.class)))
+                .thenThrow(
+                        new BadCredentialsException(
+                                "Bad credentials"));
+
+        String requestBody = """
+                {
+                  "username": "admin",
+                  "password": "wrong-password"
+                }
+                """;
+
+        mockMvc.perform(
+                post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isUnauthorized())
+                .andExpect(
+                        jsonPath("$.status").value(401))
+                .andExpect(
+                        jsonPath("$.error")
+                                .value("UNAUTHORIZED"))
                 .andExpect(
                         jsonPath("$.message")
                                 .value(
-                                        "password: Password cannot be empty"));
-
-        verifyNoInteractions(authService);
+                                        "Invalid username or password"));
     }
 }

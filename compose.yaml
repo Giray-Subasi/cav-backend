@@ -20,6 +20,7 @@ services:
       timeout: 5s
       retries: 10
 
+
   backend:
     build: .
     container_name: cav-backend-container
@@ -37,6 +38,22 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+
+  frontend:
+    build:
+      context: ../../cav-frontend
+      args:
+        VITE_API_BASE_URL: http://localhost:8080
+
+    container_name: cav-frontend-container
+
+    ports:
+      - "5173:80"
+
+    depends_on:
+      - backend
+
 
 volumes:
   cav-postgres-data:

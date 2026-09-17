@@ -1,0 +1,45 @@
+name: cav-deploy
+
+services:
+  postgres:
+    image: postgres:18
+
+    environment:
+      POSTGRES_DB: cav_db
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+
+    volumes:
+      - cav-deploy-postgres-data:/var/lib/postgresql
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d cav_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ghcr.io/giray-subasi/cav-backend:latest
+
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/cav_db
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    image: ghcr.io/giray-subasi/cav-frontend:latest
+
+    ports:
+      - "5174:80"
+
+    depends_on:
+      - backend
+
+volumes:
+  cav-deploy-postgres-data:

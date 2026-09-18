@@ -1,4 +1,3 @@
-
 # C.A.V eSIM Management System
 
 C.A.V is a full-stack eSIM profile management application built with Spring Boot, React, PostgreSQL, JWT authentication, and Docker.
@@ -6,6 +5,22 @@ C.A.V is a full-stack eSIM profile management application built with Spring Boot
 The project demonstrates backend development, frontend integration, database management, automated testing, containerization, and CI/CD.
 
 **Project purpose:** A locally runnable portfolio and internship demonstration project. Public internet deployment is not currently required.
+
+## Screenshots
+
+### Admin dashboard
+
+Overview of the local demo environment with 14 fictional eSIM profiles and lifecycle statistics.
+
+![C.A.V admin dashboard](docs/screenshots/dashboard-overview.png)
+
+### Profile inventory
+
+Profile management with different lifecycle states and administrator actions.
+
+![Profile inventory – first records](docs/screenshots/profile-inventory-1.png)
+
+![Profile inventory – remaining records](docs/screenshots/profile-inventory-2.png)
 
 ## Features
 

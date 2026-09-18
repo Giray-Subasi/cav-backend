@@ -1,3 +1,4 @@
+
 # C.A.V eSIM Management System
 
 C.A.V is a full-stack eSIM profile management application built with Spring Boot, React, PostgreSQL, JWT authentication, and Docker.
@@ -8,6 +9,7 @@ The project demonstrates backend development, frontend integration, database man
 
 ## Features
 
+- User registration and login
 - JWT-based authentication
 - Role-based authorization (`USER` / `ADMIN`)
 - eSIM profile creation and management
@@ -24,6 +26,7 @@ The project demonstrates backend development, frontend integration, database man
 - Database migrations with Flyway
 - Swagger / OpenAPI documentation in development mode
 - Dockerized frontend, backend, and PostgreSQL
+- Reusable script for creating fictional demo profiles
 
 ## Technology Stack
 
@@ -58,7 +61,7 @@ Nginx forwards `/api` requests to the backend container. This allows the fronten
 
 Users can:
 
-- Log in
+- Register and log in
 - View profiles
 - Filter and sort profiles
 - Navigate between pages
@@ -75,7 +78,7 @@ Administrators can additionally:
 - Complete profile download
 - Enable profiles
 
-Newly registered accounts receive the `USER` role by default.
+Newly registered accounts receive the `USER` role by default. Public registration does not grant administrator access.
 
 ## Running the Project Locally
 
@@ -92,7 +95,9 @@ Desktop/
 |-- cav-backend/
 |   `-- cav-backend/
 |       |-- compose.yaml
-|       `-- compose.deploy.yaml
+|       |-- compose.deploy.yaml
+|       `-- scripts/
+|           `-- seed-demo-profiles.ps1
 `-- cav-frontend/
 ```
 
@@ -143,9 +148,68 @@ The application will be available at:
 | Backend | http://localhost:8080 |
 | PostgreSQL | localhost:5433 |
 
-Open the frontend in your browser and sign in with an existing account.
+Open http://localhost:5173/login in your browser.
 
-**Note:** On a fresh database, you must register an account first. Newly registered accounts have the `USER` role.
+On a fresh database, select **Create an account** to register a user, then sign in. Newly registered accounts have the `USER` role. An existing administrator account is required for administrator-only operations.
+
+## Preparing Fictional Demo Profiles
+
+The backend repository includes a reusable PowerShell script:
+
+```text
+scripts/seed-demo-profiles.ps1
+```
+
+The script prepares up to **14 fictional eSIM profiles** through the application's existing REST API. It uses the supported operators `TURKCELL`, `VODAFONE`, and `TURK_TELEKOM`.
+
+### What the script does
+
+- Connects to the **development backend at `http://localhost:8080`**.
+- Prompts for an existing development `ADMIN` account's username and password.
+- Checks each example profile by its ICCID before attempting to create it.
+- Creates a profile only when that ICCID does not already exist.
+- Skips existing profiles, including profiles whose other fields differ from the example data.
+- Leaves existing profile details and lifecycle states unchanged.
+- Creates new profiles in the `CREATED` state.
+
+The script does **not** delete profiles or reset the database. It does not store the administrator password in the script.
+
+**Important:** The script targets the standard development environment associated with `localhost:5173`. It does not populate the separate published-image demo environment at `localhost:5174`.
+
+### Run the script on Windows
+
+Start the development environment first:
+
+```cmd
+docker compose up -d
+docker compose ps
+```
+
+From the inner backend directory, run:
+
+```cmd
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\seed-demo-profiles.ps1"
+```
+
+When prompted, enter the username and password of an existing **development ADMIN account**. Do not use the credentials of an account that exists only in the separate `5174` environment.
+
+The `-ExecutionPolicy Bypass` option applies to the PowerShell process started by this command; it does not permanently change the system's execution policy. Use it only after reviewing and trusting the local script.
+
+### Re-running the script
+
+The script can be run again without recreating profiles that already exist.
+
+For example, a successful repeat run with all 14 example ICCIDs present produces:
+
+```text
+Finished. Created: 0 | Skipped: 14
+```
+
+An existing ICCID with different EID or operator data is also skipped rather than overwritten.
+
+The development database may contain other test profiles, so the **total number of profiles in the dashboard is not necessarily 14** after running the script.
+
+This initial version creates missing profiles only. It does not automatically distribute them across lifecycle states.
 
 ## Running the Published Docker Images
 
@@ -206,6 +270,17 @@ npm run build
 
 Run these frontend commands from the `cav-frontend` directory.
 
+### Locally verified workflows
+
+- User registration and login
+- USER and ADMIN interfaces
+- Profile creation and lifecycle transitions
+- Profile filtering, sorting, and pagination
+- Read-only profile details for USER accounts
+- Backend rejection of an unauthorized USER lifecycle request with HTTP `403`
+- Persistence of demo profiles after restarting the local Docker environment
+- Repeat execution of the demo profile script without duplicate creation
+
 ## CI/CD
 
 Both repositories use GitHub Actions.
@@ -261,7 +336,9 @@ The CI/CD pipelines automate testing, building, and image publishing. They do no
 - Real secrets must not be committed to Git.
 - Authentication uses JWT bearer tokens.
 - Authorization distinguishes between `USER` and `ADMIN` roles.
+- Public registration creates `USER` accounts only.
 - The backend's allowed CORS origins can be configured through `CORS_ALLOWED_ORIGINS`.
+- Demo profiles use fictional data rather than real subscriber identifiers.
 
 ## Project Status
 
@@ -277,5 +354,6 @@ Verified locally:
 - Frontend lint and build pipeline
 - Automated Docker image publishing
 - Local deployment using published images and the `prod` profile
+- Repeatable creation of missing fictional demo profiles
 
 Current focus: reproducible local setup, documentation, and internship demonstration.
